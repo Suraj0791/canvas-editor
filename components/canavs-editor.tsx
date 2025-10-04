@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "re
 import { fabric } from "fabric"
 import { useCanvasState } from "@/hooks/use-canvas-state"
 import { useCanvasHistory } from "@/hooks/use-canvas-history"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from 'lucide-react'
 
 interface CanvasEditorProps {
   sceneId: string
@@ -32,9 +35,10 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
     const [isDrawingMode, setIsDrawingMode] = useState(false)
-    const { loadCanvas, saveCanvas } = useCanvasState(sceneId, viewOnly)
+    const { loadCanvas, saveCanvas, error, isLoading } = useCanvasState(sceneId, viewOnly)
     const { saveState, undo, redo, canUndo, canRedo, updateHistoryState } = useCanvasHistory()
     const isLoadingRef = useRef(false)
+    const [canvasReady, setCanvasReady] = useState(false)
 
     const GRID_SIZE = 20
 
@@ -238,6 +242,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             saveState(initialState)
             updateHistoryState()
             isLoadingRef.current = false
+            setCanvasReady(true)
             console.log("[v0] Canvas loaded from Firebase")
           })
         } else {
@@ -252,6 +257,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
               handleCanvasChange()
               localStorage.removeItem(`canvas-template-${sceneId}`)
               isLoadingRef.current = false
+              setCanvasReady(true)
               console.log("[v0] Template loaded")
             })
           } else {
@@ -259,6 +265,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             saveState(initialState)
             updateHistoryState()
             isLoadingRef.current = false
+            setCanvasReady(true)
           }
         }
       })
@@ -314,8 +321,18 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       }
     }, [viewOnly, sceneId])
 
+    if (isLoading || !canvasReady) {
+      return <LoadingSpinner />
+    }
+
     return (
       <div className="relative w-full h-full">
+        {error && (
+          <Alert variant="destructive" className="absolute top-4 left-1/2 -translate-x-1/2 w-auto z-30">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <canvas ref={canvasRef} />
       </div>
     )
