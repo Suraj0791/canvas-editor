@@ -15,6 +15,8 @@ export default function CanvasPage({
   const viewOnly = searchParams.viewOnly === "true"
   const canvasRef = useRef<CanvasEditorRef>(null)
   const [hasSelection, setHasSelection] = useState(false)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -24,12 +26,29 @@ export default function CanvasPage({
 
     return () => clearInterval(interval)
   }, [])
+
+  const handleHistoryChange = (undo: boolean, redo: boolean) => {
+    setCanUndo(undo)
+    setCanRedo(redo)
+  }
   
   return (
     <div className="relative w-full h-screen">
-      <TopBar sceneId={params.id} viewOnly={viewOnly} />
+      <TopBar 
+        sceneId={params.id} 
+        viewOnly={viewOnly}
+        onUndo={() => canvasRef.current?.undo()}
+        onRedo={() => canvasRef.current?.redo()}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
       <div className="pt-16 h-full">
-        <CanvasEditor ref={canvasRef} sceneId={params.id} viewOnly={viewOnly} />
+        <CanvasEditor 
+          ref={canvasRef} 
+          sceneId={params.id} 
+          viewOnly={viewOnly}
+          onHistoryChange={handleHistoryChange}
+        />
       </div>
       {!viewOnly && (
         <Toolbar 

@@ -1,16 +1,28 @@
 "use client"
 
-import { ArrowLeft, Share2, Eye } from 'lucide-react'
+import { ArrowLeft, Share2, Eye, Undo2, Redo2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { Separator } from "@/components/ui/separator"
 
 interface TopBarProps {
   sceneId: string
   viewOnly?: boolean
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
 }
 
-export function TopBar({ sceneId, viewOnly = false }: TopBarProps) {
+export function TopBar({ 
+  sceneId, 
+  viewOnly = false,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false
+}: TopBarProps) {
   const router = useRouter()
   const { toast } = useToast()
 
@@ -53,14 +65,35 @@ export function TopBar({ sceneId, viewOnly = false }: TopBarProps) {
 
       <div className="flex items-center gap-2">
         {!viewOnly && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleShare}
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Undo"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Redo"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+          </>
         )}
         <span className="text-sm text-muted-foreground">
           Scene: {sceneId}

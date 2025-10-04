@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
 import { fabric } from "fabric"
 import { useCanvasState } from "@/hooks/use-canvas-state"
+import { useCanvasHistory } from "@/hooks/use-canvas-history"
 
 interface CanvasEditorProps {
   sceneId: string
   viewOnly?: boolean
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void
 }
 
 export interface CanvasEditorRef {
@@ -19,15 +21,19 @@ export interface CanvasEditorRef {
   lockObject: () => void
   unlockObject: () => void
   deleteObject: () => void
+  undo: () => void
+  redo: () => void
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
-  ({ sceneId, viewOnly = false }, ref) => {
+  ({ sceneId, viewOnly = false, onHistoryChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
     const [isDrawingMode, setIsDrawingMode] = useState(false)
     const { loadCanvas, saveCanvas } = useCanvasState(sceneId, viewOnly)
+    const { saveState, undo, redo, canUndo, canRedo, updateHistoryState } = useCanvasHistory()
+    const isLoadingRef = useRef(false)
 
     const GRID_SIZE = 20
 
@@ -36,14 +42,25 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     }
 
     const handleCanvasChange = () => {
-      if (!fabricCanvasRef.current || viewOnly) return
+      if (!fabricCanvasRef.current || viewOnly || isLoadingRef.current) return
       
       const json = fabricCanvasRef.current.toJSON()
+      const jsonString = JSON.stringify(json)
+      
+      saveState(jsonString)
+      updateHistoryState()
+      
       saveCanvas({
         objects: json.objects,
         background: json.background,
       })
     }
+
+    useEffect(() => {
+      if (onHistoryChange) {
+        onHistoryChange(canUndo, canRedo)
+      }
+    }, [canUndo, canRedo, onHistoryChange])
 
     useImperativeHandle(ref, () => ({
       addRectangle: () => {
@@ -160,6 +177,30 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
         handleCanvasChange()
       },
+      undo: () => {
+        if (!fabricCanvasRef.current || viewOnly) return
+        const prevState = undo()
+        if (prevState) {
+          isLoadingRef.current = true
+          fabricCanvasRef.current.loadFromJSON(JSON.parse(prevState), () => {
+            fabricCanvasRef.current?.renderAll()
+            isLoadingRef.current = false
+            updateHistoryState()
+          })
+        }
+      },
+      redo: () => {
+        if (!fabricCanvasRef.current || viewOnly) return
+        const nextState = redo()
+        if (nextState) {
+          isLoadingRef.current = true
+          fabricCanvasRef.current.loadFromJSON(JSON.parse(nextState), () => {
+            fabricCanvasRef.current?.renderAll()
+            isLoadingRef.current = false
+            updateHistoryState()
+          })
+        }
+      },
     }))
 
     useEffect(() => {
@@ -175,11 +216,21 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       fabricCanvasRef.current = canvas
 
       loadCanvas().then((data) => {
+        isLoadingRef.current = true
         if (data && data.objects) {
           canvas.loadFromJSON({ objects: data.objects, background: data.background }, () => {
             canvas.renderAll()
+            const initialState = JSON.stringify(canvas.toJSON())
+            saveState(initialState)
+            updateHistoryState()
+            isLoadingRef.current = false
             console.log("[v0] Canvas loaded from Firebase")
           })
+        } else {
+          const initialState = JSON.stringify(canvas.toJSON())
+          saveState(initialState)
+          updateHistoryState()
+          isLoadingRef.current = false
         }
       })
 
@@ -223,13 +274,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         }
       })
 
-      canvas.on("object:added", () => {
-        if (!viewOnly) {
-          handleCanvasChange()
-        }
-      })
-
-      canvas.on("object:removed", () => {
+      canvas.on("path:created", () => {
         if (!viewOnly) {
           handleCanvasChange()
         }
