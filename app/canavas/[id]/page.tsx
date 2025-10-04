@@ -1,4 +1,8 @@
-import { CanvasEditor } from "@/components/canvas-editor"
+"use client"
+
+import { useRef } from "react"
+import { CanvasEditor, CanvasEditorRef } from "@/components/canvas-editor"
+import { Toolbar } from "@/components/toolbar"
 
 export default function CanvasPage({ 
   params,
@@ -8,6 +12,17 @@ export default function CanvasPage({
   searchParams: { viewOnly?: string }
 }) {
   const viewOnly = searchParams.viewOnly === "true"
+  const canvasRef = useRef<CanvasEditorRef>(null)
   
-  return <CanvasEditor sceneId={params.id} viewOnly={viewOnly} />
+  return (
+    <>
+      <CanvasEditor ref={canvasRef} sceneId={params.id} viewOnly={viewOnly} />
+      {!viewOnly && (
+        <Toolbar 
+          onAddRectangle={() => canvasRef.current?.addRectangle()}
+          onAddCircle={() => canvasRef.current?.addCircle()}
+        />
+      )}
+    </>
+  )
 }

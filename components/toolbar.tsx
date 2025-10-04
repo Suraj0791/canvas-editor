@@ -4,13 +4,28 @@ import { Square, Circle, Type, Pen } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 
-export function Toolbar() {
+interface ToolbarProps {
+  onAddRectangle: () => void
+  onAddCircle: () => void
+}
+
+export function Toolbar({ onAddRectangle, onAddCircle }: ToolbarProps) {
   return (
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-white border rounded-lg p-2 shadow-lg">
-      <Button variant="ghost" size="icon" title="Rectangle">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-white border rounded-lg p-2 shadow-lg z-10">
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        title="Rectangle"
+        onClick={onAddRectangle}
+      >
         <Square className="h-5 w-5" />
       </Button>
-      <Button variant="ghost" size="icon" title="Circle">
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        title="Circle"
+        onClick={onAddCircle}
+      >
         <Circle className="h-5 w-5" />
       </Button>
       <Button variant="ghost" size="icon" title="Text">
