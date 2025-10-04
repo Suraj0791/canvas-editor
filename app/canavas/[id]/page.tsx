@@ -18,10 +18,11 @@ export default function CanvasPage({
     <>
       <CanvasEditor ref={canvasRef} sceneId={params.id} viewOnly={viewOnly} />
       {!viewOnly && (
-        <Toolbar 
-          onAddRectangle={() => canvasRef.current?.addRectangle()}
-          onAddCircle={() => canvasRef.current?.addCircle()}
-        />
+<Toolbar 
+  onAddRectangle={() => canvasRef.current?.addRectangle()}
+  onAddCircle={() => canvasRef.current?.addCircle()}
+  onAddText={() => canvasRef.current?.addText()} // <CHANGE> Added text handler
+/>
       )}
     </>
   )

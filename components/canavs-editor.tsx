@@ -11,6 +11,7 @@ interface CanvasEditorProps {
 export interface CanvasEditorRef {
   addRectangle: () => void
   addCircle: () => void
+  addText: () => void
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -54,7 +55,26 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fill: "#f97316",
           stroke: "#ea580c",
           strokeWidth: 2,
+        }),
+
+        addText: () => {
+        if (!fabricCanvasRef.current) return
+        
+        const text = new fabric.IText("Double click to edit", {
+          left: 100,
+          top: 100,
+          fontSize: 24,
+          fill: "#1f2937",
+          fontFamily: "Arial",
         })
+        
+        fabricCanvasRef.current.add(text)
+        fabricCanvasRef.current.setActiveObject(text)
+        fabricCanvasRef.current.renderAll()
+      },
+    }))
+
+
         
         fabricCanvasRef.current.add(circle)
         fabricCanvasRef.current.setActiveObject(circle)

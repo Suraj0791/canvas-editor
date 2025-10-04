@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 interface ToolbarProps {
   onAddRectangle: () => void
   onAddCircle: () => void
+  onAddText: () => void
 }
 
 export function Toolbar({ onAddRectangle, onAddCircle }: ToolbarProps) {
