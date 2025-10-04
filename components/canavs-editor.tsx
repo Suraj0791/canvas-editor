@@ -13,6 +13,11 @@ export interface CanvasEditorRef {
   addCircle: () => void
   addText: () => void
   toggleDrawingMode: () => void
+  changeColor: (color: string) => void
+  getSelectedObject: () => fabric.Object | null
+  lockObject: () => void
+  unlockObject: () => void
+  deleteObject: () => void
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -20,6 +25,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
+    const [isDrawingMode, setIsDrawingMode] = useState(false)
 
     const GRID_SIZE = 20
 
@@ -27,21 +33,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       return Math.round(value / GRID_SIZE) * GRID_SIZE
     }
 
-    // Expose methods to parent
     useImperativeHandle(ref, () => ({
-
-      toggleDrawingMode: () => {
-        if (!fabricCanvasRef.current) return
-        
-        const newMode = !isDrawingMode
-        setIsDrawingMode(newMode)
-        fabricCanvasRef.current.isDrawingMode = newMode
-        
-        if (newMode) {
-          fabricCanvasRef.current.freeDrawingBrush.color = "#1f2937"
-          fabricCanvasRef.current.freeDrawingBrush.width = 3
-        }, 
-        
       addRectangle: () => {
         if (!fabricCanvasRef.current) return
         
@@ -69,9 +61,13 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fill: "#f97316",
           stroke: "#ea580c",
           strokeWidth: 2,
-        }),
-
-        addText: () => {
+        })
+        
+        fabricCanvasRef.current.add(circle)
+        fabricCanvasRef.current.setActiveObject(circle)
+        fabricCanvasRef.current.renderAll()
+      },
+      addText: () => {
         if (!fabricCanvasRef.current) return
         
         const text = new fabric.IText("Double click to edit", {
@@ -86,12 +82,63 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.setActiveObject(text)
         fabricCanvasRef.current.renderAll()
       },
-    }))
-
-
+      toggleDrawingMode: () => {
+        if (!fabricCanvasRef.current) return
         
-        fabricCanvasRef.current.add(circle)
-        fabricCanvasRef.current.setActiveObject(circle)
+        const newMode = !isDrawingMode
+        setIsDrawingMode(newMode)
+        fabricCanvasRef.current.isDrawingMode = newMode
+        
+        if (newMode) {
+          fabricCanvasRef.current.freeDrawingBrush.color = "#1f2937"
+          fabricCanvasRef.current.freeDrawingBrush.width = 3
+        }
+      },
+      changeColor: (color: string) => {
+        if (!fabricCanvasRef.current) return
+        
+        const activeObject = fabricCanvasRef.current.getActiveObject()
+        if (!activeObject) return
+        
+        activeObject.set({ fill: color })
+        fabricCanvasRef.current.renderAll()
+      },
+      getSelectedObject: () => selectedObject,
+      lockObject: () => {
+        if (!fabricCanvasRef.current) return
+        const activeObject = fabricCanvasRef.current.getActiveObject()
+        if (!activeObject) return
+        
+        activeObject.set({
+          lockMovementX: true,
+          lockMovementY: true,
+          lockRotation: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          selectable: true,
+        })
+        fabricCanvasRef.current.renderAll()
+      },
+      unlockObject: () => {
+        if (!fabricCanvasRef.current) return
+        const activeObject = fabricCanvasRef.current.getActiveObject()
+        if (!activeObject) return
+        
+        activeObject.set({
+          lockMovementX: false,
+          lockMovementY: false,
+          lockRotation: false,
+          lockScalingX: false,
+          lockScalingY: false,
+        })
+        fabricCanvasRef.current.renderAll()
+      },
+      deleteObject: () => {
+        if (!fabricCanvasRef.current) return
+        const activeObject = fabricCanvasRef.current.getActiveObject()
+        if (!activeObject) return
+        
+        fabricCanvasRef.current.remove(activeObject)
         fabricCanvasRef.current.renderAll()
       },
     }))
@@ -101,7 +148,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
       const canvas = new fabric.Canvas(canvasRef.current, {
         width: window.innerWidth,
-        height: window.innerHeight,
+        height: window.innerHeight - 64,
         backgroundColor: "#ffffff",
       })
 
@@ -139,7 +186,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     }, [])
 
     return (
-      <div className="relative w-full h-screen">
+      <div className="relative w-full h-full">
         <canvas ref={canvasRef} />
       </div>
     )
