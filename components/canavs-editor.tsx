@@ -12,6 +12,7 @@ export interface CanvasEditorRef {
   addRectangle: () => void
   addCircle: () => void
   addText: () => void
+  toggleDrawingMode: () => void
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -28,6 +29,19 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
+
+      toggleDrawingMode: () => {
+        if (!fabricCanvasRef.current) return
+        
+        const newMode = !isDrawingMode
+        setIsDrawingMode(newMode)
+        fabricCanvasRef.current.isDrawingMode = newMode
+        
+        if (newMode) {
+          fabricCanvasRef.current.freeDrawingBrush.color = "#1f2937"
+          fabricCanvasRef.current.freeDrawingBrush.width = 3
+        }, 
+        
       addRectangle: () => {
         if (!fabricCanvasRef.current) return
         

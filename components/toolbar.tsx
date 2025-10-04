@@ -8,9 +8,18 @@ interface ToolbarProps {
   onAddRectangle: () => void
   onAddCircle: () => void
   onAddText: () => void
+  onToggleDrawing: () => void
 }
 
 export function Toolbar({ onAddRectangle, onAddCircle }: ToolbarProps) {
+
+
+    const [isDrawing, setIsDrawing] = useState(false)
+
+  const handleDrawingToggle = () => {
+    setIsDrawing(!isDrawing)
+    onToggleDrawing()
+  }
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-white border rounded-lg p-2 shadow-lg z-10">
       <Button 
