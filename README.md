@@ -208,4 +208,5 @@ MIT
 
 ## Contact
 
-[Your name/contact info]
+SURAJ SHARMA
+surajstudent9122@gmail.com

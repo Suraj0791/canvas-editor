@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { Canvas, FabricObject } from "fabric"
+import { Canvas } from "fabric"
 import { Toolbar } from "@/components/toolbar"
 import { TopBar } from "@/components/top-bar"
 import { TemplateDialog } from "@/components/template-dialog"
@@ -65,9 +65,6 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
     console.log("[Canvas] Created:", {
       width: canvas.width,
       height: canvas.height,
-      canvasElement: canvasRef.current,
-      upperCanvasElement: canvas.upperCanvasEl,
-      lowerCanvasElement: canvas.lowerCanvasEl,
     })
 
     const handleResize = () => {
@@ -90,13 +87,6 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
 
     loadCanvas().then((exists) => {
       setIsInitialized(true)
-      
-      setTimeout(() => {
-        if (fabricCanvas) {
-          recordState()
-          console.log("[Canvas] Initial state recorded after load")
-        }
-      }, 200)
       
       if (!exists && !viewOnly && !initialTemplate) {
         setShowTemplateDialog(true)
