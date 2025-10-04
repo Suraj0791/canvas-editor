@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
-import { fabric } from "fabric"
+import fabric from "fabric"
 import { useCanvasState } from "@/hooks/use-canvas-state"
 import { useCanvasHistory } from "@/hooks/use-canvas-history"
 import { LoadingSpinner } from "@/components/loading-spinner"
