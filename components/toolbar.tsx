@@ -66,13 +66,6 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
       canvas.setActiveObject(rect)
       
       console.log("[v0] Rectangle added. Canvas objects count:", canvas.getObjects().length)
-      console.log("[v0] Upper canvas element:", canvas.upperCanvasEl)
-      console.log("[v0] Canvas is dirty:", canvas.isRendering())
-      
-      const ctx = canvas.getContext();
-      console.log("[v0] Canvas context:", ctx)
-      ctx.fillStyle = 'green';
-      ctx.fillRect(0, 0, 50, 50);
     } else if (toolId === "circle") {
       const left = 100 + Math.random() * 200
       const top = 100 + Math.random() * 200

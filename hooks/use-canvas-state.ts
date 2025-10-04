@@ -11,15 +11,27 @@ function removeUndefined(obj: any): any {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(removeUndefined)
+    return obj.map(removeUndefined).filter(item => item !== null && item !== undefined)
   }
 
   if (typeof obj === "object") {
     const cleaned: any = {}
     for (const key in obj) {
       const value = obj[key]
-      if (value !== undefined) {
-        cleaned[key] = removeUndefined(value)
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          const cleanedArray = value.map(removeUndefined).filter(item => item !== null && item !== undefined)
+          if (cleanedArray.length > 0) {
+            cleaned[key] = cleanedArray
+          }
+        } else if (typeof value === "object") {
+          const cleanedObj = removeUndefined(value)
+          if (Object.keys(cleanedObj).length > 0) {
+            cleaned[key] = cleanedObj
+          }
+        } else {
+          cleaned[key] = value
+        }
       }
     }
     return cleaned
@@ -43,13 +55,20 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
         const json = canvas.toJSON()
         const cleanedJson = removeUndefined(json)
 
+        const serialized = JSON.stringify(cleanedJson)
+        const deserialized = JSON.parse(serialized)
+
         await setDoc(doc(db, "canvases", sceneId), {
-          data: cleanedJson,
+          data: deserialized,
           updatedAt: new Date().toISOString(),
         })
         console.log("[Canvas] Saved to Firestore")
-      } catch (error) {
-        console.error("[Canvas] Error saving:", error)
+      } catch (error: any) {
+        if (error?.message?.includes("Nested arrays")) {
+          console.warn("[Canvas] Skipping save - contains nested arrays (likely pen strokes)")
+        } else {
+          console.error("[Canvas] Error saving:", error)
+        }
       }
     }, 1000)
   }, [canvas, sceneId])

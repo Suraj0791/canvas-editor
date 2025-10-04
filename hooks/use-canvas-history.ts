@@ -19,18 +19,22 @@ export function useCanvasHistory(canvas: Canvas | null) {
   const recordState = useCallback(() => {
     if (!canvas || isUndoRedoRef.current) return
 
-    const json = JSON.stringify(canvas.toJSON())
-    setHistory((prev) => {
-      const newHistory = prev.slice(0, currentIndex + 1)
-      newHistory.push(json)
-      
-      if (newHistory.length > 50) {
-        newHistory.shift()
+    try {
+      const json = JSON.stringify(canvas.toJSON())
+      setHistory((prev) => {
+        const newHistory = prev.slice(0, currentIndex + 1)
+        newHistory.push(json)
+        
+        if (newHistory.length > 50) {
+          newHistory.shift()
+          return newHistory
+        }
+        setCurrentIndex((prevIndex) => prevIndex + 1)
         return newHistory
-      }
-      setCurrentIndex((prevIndex) => prevIndex + 1)
-      return newHistory
-    })
+      })
+    } catch (error) {
+      console.error("[History] Error recording state:", error)
+    }
   }, [canvas, currentIndex])
 
   const undo = useCallback(() => {
@@ -39,17 +43,28 @@ export function useCanvasHistory(canvas: Canvas | null) {
     isUndoRedoRef.current = true
     const prevState = history[currentIndex - 1]
     
-    canvas.loadFromJSON(JSON.parse(prevState))
-      .then(() => {
-        canvas.renderAll()
-        isUndoRedoRef.current = false
-      })
-      .catch((err) => {
-        console.error("[History] Undo error:", err)
-        isUndoRedoRef.current = false
-      })
-    
-    setCurrentIndex((prev) => prev - 1)
+    if (!prevState) {
+      console.error("[History] No previous state available")
+      isUndoRedoRef.current = false
+      return
+    }
+
+    try {
+      canvas.loadFromJSON(JSON.parse(prevState))
+        .then(() => {
+          canvas.renderAll()
+          isUndoRedoRef.current = false
+        })
+        .catch((err) => {
+          console.error("[History] Undo error:", err)
+          isUndoRedoRef.current = false
+        })
+      
+      setCurrentIndex((prev) => prev - 1)
+    } catch (error) {
+      console.error("[History] Undo JSON parse error:", error)
+      isUndoRedoRef.current = false
+    }
   }, [canvas, history, currentIndex])
 
   const redo = useCallback(() => {
@@ -58,17 +73,28 @@ export function useCanvasHistory(canvas: Canvas | null) {
     isUndoRedoRef.current = true
     const nextState = history[currentIndex + 1]
     
-    canvas.loadFromJSON(JSON.parse(nextState))
-      .then(() => {
-        canvas.renderAll()
-        isUndoRedoRef.current = false
-      })
-      .catch((err) => {
-        console.error("[History] Redo error:", err)
-        isUndoRedoRef.current = false
-      })
-    
-    setCurrentIndex((prev) => prev + 1)
+    if (!nextState) {
+      console.error("[History] No next state available")
+      isUndoRedoRef.current = false
+      return
+    }
+
+    try {
+      canvas.loadFromJSON(JSON.parse(nextState))
+        .then(() => {
+          canvas.renderAll()
+          isUndoRedoRef.current = false
+        })
+        .catch((err) => {
+          console.error("[History] Redo error:", err)
+          isUndoRedoRef.current = false
+        })
+      
+      setCurrentIndex((prev) => prev + 1)
+    } catch (error) {
+      console.error("[History] Redo JSON parse error:", error)
+      isUndoRedoRef.current = false
+    }
   }, [canvas, history, currentIndex])
 
   return {
