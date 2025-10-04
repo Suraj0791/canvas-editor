@@ -241,10 +241,25 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             console.log("[v0] Canvas loaded from Firebase")
           })
         } else {
-          const initialState = JSON.stringify(canvas.toJSON())
-          saveState(initialState)
-          updateHistoryState()
-          isLoadingRef.current = false
+          const templateData = localStorage.getItem(`canvas-template-${sceneId}`)
+          if (templateData) {
+            const templateObjects = JSON.parse(templateData)
+            canvas.loadFromJSON({ objects: templateObjects }, () => {
+              canvas.renderAll()
+              const initialState = JSON.stringify(canvas.toJSON())
+              saveState(initialState)
+              updateHistoryState()
+              handleCanvasChange()
+              localStorage.removeItem(`canvas-template-${sceneId}`)
+              isLoadingRef.current = false
+              console.log("[v0] Template loaded")
+            })
+          } else {
+            const initialState = JSON.stringify(canvas.toJSON())
+            saveState(initialState)
+            updateHistoryState()
+            isLoadingRef.current = false
+          }
         }
       })
 
