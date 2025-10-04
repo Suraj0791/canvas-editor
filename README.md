@@ -1,36 +1,211 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Canvas Editor
+
+A lightweight, web-based collaborative canvas editor built with React, Fabric.js, and Firebase Firestore. No login required - just share a link and start creating.
+
+## Live Demo
+
+[Add your deployed link here]
+
+## Features
+
+### Core Functionality
+- **Canvas Editing**: Add rectangles, circles, text, and freehand drawings
+- **Object Manipulation**: Move, resize, rotate, and delete objects
+- **Real-time Editing**: Edit text content and change object colors
+- **Scene Management**: Each canvas gets a unique URL for easy sharing
+- **Auto-save**: Changes automatically save to Firestore (debounced to 1 second)
+- **Shareable Links**: Anyone with the link can view and edit - no authentication needed
+
+### Bonus Features Implemented
+- **Snap to Grid**: Objects snap to a 20px grid when moving for precise alignment
+- **Undo/Redo**: Full history support with up to 50 states
+- **Export**: Download canvas as PNG or SVG
+- **View-only Mode**: Share read-only links using `?viewOnly=true`
+- **Object Locking**: Lock/unlock objects to prevent accidental edits
+- **Templates**: Choose from 4 starter templates (blank, presentation, wireframe, flowchart)
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Canvas Library**: Fabric.js v6
+- **Database**: Firebase Firestore
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI, shadcn/ui
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+ 
+- Firebase project with Firestore enabled
 
+### Installation
+
+1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone [your-repo-url]
+cd canvas-editor
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Configure Firebase
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-auth-domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000)
 
-To learn more about Next.js, take a look at the following resources:
+## Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Creating a Canvas
+1. Visit the home page
+2. Select a template (or choose "Blank Canvas")
+3. You'll be redirected to `/canvas/[unique-id]`
+4. Start creating!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Sharing a Canvas
+1. Click the "Share Canvas" button in the top bar
+2. The link is automatically copied to your clipboard
+3. Share the link with anyone - they can view and edit immediately
+4. For read-only sharing, add `?viewOnly=true` to the URL
 
-## Deploy on Vercel
+### Keyboard Shortcuts
+- `Cmd/Ctrl + Z`: Undo
+- `Cmd/Ctrl + Shift + Z`: Redo (via UI buttons)
+- `Delete/Backspace`: Delete selected object
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Component Structure
+```
+/app
+  /canvas/[id]      # Dynamic canvas route
+  page.tsx          # Home page with template selection
+/components
+  canvas-editor.tsx # Main canvas component
+  toolbar.tsx       # Tool selection sidebar
+  top-bar.tsx       # Actions and sharing
+  template-dialog.tsx # Template selection modal
+/hooks
+  use-canvas-state.ts   # Firestore persistence
+  use-canvas-history.ts # Undo/redo functionality
+/lib
+  firebase.ts       # Firebase configuration
+```
+
+### Data Flow
+1. Canvas state is managed by Fabric.js
+2. Changes trigger auto-save (debounced to 1 second)
+3. Canvas JSON is cleaned and saved to Firestore
+4. On load, canvas state is fetched from Firestore and restored
+
+## Trade-offs and Decisions
+
+### 1. Pen Tool Persistence Limitation
+**Issue**: Firestore doesn't support nested arrays, which are generated by Fabric.js pen/path objects.
+
+**Current Implementation**: Pen strokes are simplified to placeholder strings before saving to Firestore. This means:
+- Pen tool works perfectly during the session
+- Pen strokes are NOT fully persisted to the database
+- Other objects (rectangles, circles, text) persist perfectly
+
+**Alternatives Considered**:
+- **Option A**: Remove pen tool entirely (rejected - reduces functionality)
+- **Option B**: Use Firebase Storage for canvas snapshots (rejected - increases complexity)
+- **Option C**: Switch to MongoDB/PostgreSQL (rejected - spec requires Firestore)
+- **Option D**: Convert paths to SVG strings (considered for future enhancement)
+
+**Decision**: Keep the pen tool with a known limitation. Users get immediate value from the tool during their session, and the limitation is acceptable given Firestore's constraints. Most use cases focus on shapes and text, not freehand drawing.
+
+### 2. Auto-save Debouncing
+**Decision**: 1-second debounce on Firestore writes
+
+**Reasoning**: 
+- Reduces Firestore write operations (cost optimization)
+- Prevents excessive writes during rapid edits
+- 1 second feels instant to users
+- Balances between data safety and performance
+
+### 3. History Limit
+**Decision**: Store last 50 states for undo/redo
+
+**Reasoning**:
+- Sufficient for typical editing sessions
+- Prevents memory bloat in long sessions
+- Balances functionality with performance
+
+### 4. Template Selection Flow
+**Implementation**: Home page with template selection before canvas creation
+
+**Spec Interpretation**: The spec says "redirect from / to /canvas/:id" but doesn't specify when templates should appear. Placing template selection on the home page provides better UX by setting user intent upfront, while still meeting the core requirement of URL-based scene management.
+
+### 5. Real-time Collaboration
+**Not Implemented**: Users must refresh to see others' changes
+
+**Reasoning**: 
+- Spec doesn't require real-time updates
+- Implementing WebSockets/Firestore listeners adds significant complexity
+- Current solution meets the "shareable and editable" requirement
+- Would be a natural next feature for v2
+
+## Known Limitations
+
+1. **Pen strokes don't persist** (see Trade-offs section above)
+2. **No real-time collaboration** - users must refresh to see others' changes
+3. **No conflict resolution** - last write wins if multiple users edit simultaneously
+4. **Browser extensions may block Firestore** - ad blockers can interfere with Firebase connections (resolved by whitelisting or using incognito mode during testing)
+
+## Future Enhancements
+
+- Real-time collaboration using Firestore snapshots
+- Full pen stroke persistence using alternative storage
+- More object types (triangles, lines, arrows)
+- Layer management
+- Keyboard shortcuts for tools
+- Mobile touch support optimization
+- Canvas version history
+- Comments and annotations
+- Export to PDF
+
+## Testing Notes
+
+- Test in incognito mode if using ad blockers (they may block Firestore)
+- Verify sharing by opening the same URL in a different browser/window
+- Check browser console for save confirmations: `[Canvas] ✓ Successfully saved to Firestore`
+
+## Deployment
+
+### Firebase Hosting
+```bash
+npm run build
+firebase deploy
+```
+
+### Vercel
+```bash
+vercel deploy
+```
+
+Make sure to set environment variables in your deployment platform's settings.
+
+## License
+
+MIT
+
+## Contact
+
+[Your name/contact info]
