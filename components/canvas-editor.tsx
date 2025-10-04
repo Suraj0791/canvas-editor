@@ -90,6 +90,14 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
 
     loadCanvas().then((exists) => {
       setIsInitialized(true)
+      
+      setTimeout(() => {
+        if (fabricCanvas) {
+          recordState()
+          console.log("[Canvas] Initial state recorded after load")
+        }
+      }, 200)
+      
       if (!exists && !viewOnly && !initialTemplate) {
         setShowTemplateDialog(true)
       }

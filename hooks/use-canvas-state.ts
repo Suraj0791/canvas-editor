@@ -5,27 +5,33 @@ import type { Canvas } from "fabric"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
-function removeUndefined(obj: any): any {
+function cleanCanvasData(obj: any): any {
   if (obj === null || obj === undefined) {
     return null
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(removeUndefined).filter(item => item !== null && item !== undefined)
+    return obj.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
   }
 
   if (typeof obj === "object") {
     const cleaned: any = {}
     for (const key in obj) {
       const value = obj[key]
+      
+      if (key === "path" && Array.isArray(value)) {
+        cleaned[key] = "SIMPLIFIED_PATH"
+        continue
+      }
+      
       if (value !== undefined && value !== null) {
         if (Array.isArray(value)) {
-          const cleanedArray = value.map(removeUndefined).filter(item => item !== null && item !== undefined)
+          const cleanedArray = value.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
           if (cleanedArray.length > 0) {
             cleaned[key] = cleanedArray
           }
         } else if (typeof value === "object") {
-          const cleanedObj = removeUndefined(value)
+          const cleanedObj = cleanCanvasData(value)
           if (Object.keys(cleanedObj).length > 0) {
             cleaned[key] = cleanedObj
           }
@@ -53,21 +59,17 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         const json = canvas.toJSON()
-        const cleanedJson = removeUndefined(json)
-
-        const serialized = JSON.stringify(cleanedJson)
-        const deserialized = JSON.parse(serialized)
+        const cleanedJson = cleanCanvasData(json)
 
         await setDoc(doc(db, "canvases", sceneId), {
-          data: deserialized,
+          data: cleanedJson,
           updatedAt: new Date().toISOString(),
         })
-        console.log("[Canvas] Saved to Firestore")
+        console.log("[Canvas] ✓ Successfully saved to Firestore")
       } catch (error: any) {
-        if (error?.message?.includes("Nested arrays")) {
-          console.warn("[Canvas] Skipping save - contains nested arrays (likely pen strokes)")
-        } else {
-          console.error("[Canvas] Error saving:", error)
+        console.error("[Canvas] ✗ Save failed:", error?.message || error)
+        if (error?.message?.includes("network")) {
+          console.error("Network blocked - check ad blockers or privacy extensions")
         }
       }
     }, 1000)
