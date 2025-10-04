@@ -5,6 +5,29 @@ import type { Canvas } from "fabric"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
+function removeUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined)
+  }
+
+  if (typeof obj === "object") {
+    const cleaned: any = {}
+    for (const key in obj) {
+      const value = obj[key]
+      if (value !== undefined) {
+        cleaned[key] = removeUndefined(value)
+      }
+    }
+    return cleaned
+  }
+
+  return obj
+}
+
 export function useCanvasState(sceneId: string, canvas: Canvas | null) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
@@ -19,8 +42,10 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         const json = canvas.toJSON()
+        const cleanedJson = removeUndefined(json)
+
         await setDoc(doc(db, "canvases", sceneId), {
-          data: json,
+          data: cleanedJson,
           updatedAt: new Date().toISOString(),
         })
       } catch (error) {
