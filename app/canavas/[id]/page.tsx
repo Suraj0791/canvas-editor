@@ -27,6 +27,35 @@ export default function CanvasPage({
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    if (viewOnly) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault()
+        canvasRef.current?.undo()
+      }
+      
+      if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault()
+        canvasRef.current?.redo()
+      }
+      
+      if ((e.key === "Delete" || e.key === "Backspace") && hasSelection) {
+        e.preventDefault()
+        canvasRef.current?.deleteObject()
+      }
+      
+      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+        e.preventDefault()
+        canvasRef.current?.exportAsPNG()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [viewOnly, hasSelection])
+
   const handleHistoryChange = (undo: boolean, redo: boolean) => {
     setCanUndo(undo)
     setCanRedo(redo)
