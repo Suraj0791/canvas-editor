@@ -25,53 +25,86 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
   ]
 
   const handleToolClick = (toolId: string) => {
-    if (!canvas) return
+    console.log("[v0] Tool clicked:", toolId, "Canvas exists:", !!canvas)
+
+    if (!canvas) {
+      console.log("[v0] ERROR: Canvas is null, cannot use tool")
+      return
+    }
+
     onToolSelect(toolId)
 
-    // Disable drawing mode by default
     canvas.isDrawingMode = false
+    canvas.selection = true
 
     if (toolId === "select") {
       canvas.defaultCursor = "default"
+      console.log("[v0] Select tool activated")
     } else if (toolId === "pen") {
       canvas.isDrawingMode = true
-      canvas.freeDrawingBrush = new PencilBrush(canvas)
-      canvas.freeDrawingBrush.color = color
-      canvas.freeDrawingBrush.width = 3
+      const brush = new PencilBrush(canvas)
+      brush.color = color
+      brush.width = 3
+      canvas.freeDrawingBrush = brush
+      console.log("[v0] Pen tool activated, drawing mode:", canvas.isDrawingMode)
     } else if (toolId === "rectangle") {
+      const left = 100 + Math.random() * 200
+      const top = 100 + Math.random() * 200
+
       const rect = new Rect({
-        left: 100,
-        top: 100,
+        left,
+        top,
         width: 150,
         height: 100,
         fill: color,
+        stroke: "#000000",
+        strokeWidth: 2,
       })
+
+      console.log("[v0] Adding rectangle at:", { left, top, width: 150, height: 100, fill: color })
       canvas.add(rect)
       canvas.setActiveObject(rect)
       canvas.renderAll()
-      onToolSelect("select")
+
+      console.log("[v0] Rectangle added. Canvas objects count:", canvas.getObjects().length)
+      console.log("[v0] Canvas dimensions:", { width: canvas.width, height: canvas.height })
+      console.log("[v0] Rectangle object:", rect.toJSON())
     } else if (toolId === "circle") {
+      const left = 100 + Math.random() * 200
+      const top = 100 + Math.random() * 200
+
       const circle = new FabricCircle({
-        left: 100,
-        top: 100,
+        left,
+        top,
         radius: 50,
         fill: color,
+        stroke: "#000000",
+        strokeWidth: 2,
       })
+
+      console.log("[v0] Adding circle at:", { left, top, radius: 50, fill: color })
       canvas.add(circle)
       canvas.setActiveObject(circle)
       canvas.renderAll()
-      onToolSelect("select")
+
+      console.log("[v0] Circle added. Canvas objects count:", canvas.getObjects().length)
     } else if (toolId === "text") {
+      const left = 100 + Math.random() * 200
+      const top = 100 + Math.random() * 200
+
       const text = new IText("Double click to edit", {
-        left: 100,
-        top: 100,
+        left,
+        top,
         fill: color,
         fontSize: 24,
       })
+
+      console.log("[v0] Adding text at:", { left, top, fill: color })
       canvas.add(text)
       canvas.setActiveObject(text)
       canvas.renderAll()
-      onToolSelect("select")
+
+      console.log("[v0] Text added. Canvas objects count:", canvas.getObjects().length)
     }
   }
 
@@ -138,6 +171,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
           onClick={() => handleToolClick(tool.id)}
           title={tool.label}
           className="h-12 w-12"
+          disabled={!canvas}
         >
           <tool.icon className="h-5 w-5" />
         </Button>

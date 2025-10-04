@@ -23,10 +23,9 @@ export function useCanvasHistory(canvas: Canvas | null) {
     setHistory((prev) => {
       const newHistory = prev.slice(0, currentIndex + 1)
       newHistory.push(json)
-      // Keep only last 50 states
+      
       if (newHistory.length > 50) {
         newHistory.shift()
-        setCurrentIndex((prevIndex) => prevIndex)
         return newHistory
       }
       setCurrentIndex((prevIndex) => prevIndex + 1)
@@ -39,10 +38,17 @@ export function useCanvasHistory(canvas: Canvas | null) {
 
     isUndoRedoRef.current = true
     const prevState = history[currentIndex - 1]
-    canvas.loadFromJSON(JSON.parse(prevState), () => {
-      canvas.renderAll()
-      isUndoRedoRef.current = false
-    })
+    
+    canvas.loadFromJSON(JSON.parse(prevState))
+      .then(() => {
+        canvas.renderAll()
+        isUndoRedoRef.current = false
+      })
+      .catch((err) => {
+        console.error("[History] Undo error:", err)
+        isUndoRedoRef.current = false
+      })
+    
     setCurrentIndex((prev) => prev - 1)
   }, [canvas, history, currentIndex])
 
@@ -51,10 +57,17 @@ export function useCanvasHistory(canvas: Canvas | null) {
 
     isUndoRedoRef.current = true
     const nextState = history[currentIndex + 1]
-    canvas.loadFromJSON(JSON.parse(nextState), () => {
-      canvas.renderAll()
-      isUndoRedoRef.current = false
-    })
+    
+    canvas.loadFromJSON(JSON.parse(nextState))
+      .then(() => {
+        canvas.renderAll()
+        isUndoRedoRef.current = false
+      })
+      .catch((err) => {
+        console.error("[History] Redo error:", err)
+        isUndoRedoRef.current = false
+      })
+    
     setCurrentIndex((prev) => prev + 1)
   }, [canvas, history, currentIndex])
 

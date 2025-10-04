@@ -34,7 +34,6 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
   const saveCanvas = useCallback(async () => {
     if (!canvas) return
 
-    // Debounce saves to reduce Firestore writes
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
@@ -48,10 +47,11 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
           data: cleanedJson,
           updatedAt: new Date().toISOString(),
         })
+        console.log("[Canvas] Saved to Firestore")
       } catch (error) {
-        console.error("[v0] Error saving canvas:", error)
+        console.error("[Canvas] Error saving:", error)
       }
-    }, 1000) // Debounce for 1 second
+    }, 1000)
   }, [canvas, sceneId])
 
   const loadCanvas = useCallback(async (): Promise<boolean> => {
@@ -63,14 +63,15 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
 
       if (docSnap.exists()) {
         const data = docSnap.data()
-        canvas.loadFromJSON(data.data, () => {
-          canvas.renderAll()
-        })
+        await canvas.loadFromJSON(data.data)
+        canvas.renderAll()
+        console.log("[Canvas] Loaded from Firestore")
         return true
       }
+      console.log("[Canvas] No saved data found")
       return false
     } catch (error) {
-      console.error("[v0] Error loading canvas:", error)
+      console.error("[Canvas] Error loading:", error)
       return false
     }
   }, [canvas, sceneId])
