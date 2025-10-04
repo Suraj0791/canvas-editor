@@ -1,5 +1,6 @@
+import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Canvas Editor",
-  description: "Create and share beautiful canvases",
+  description: "A collaborative canvas editor with shareable links",
 }
 
 export default function RootLayout({
@@ -25,9 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
       </body>

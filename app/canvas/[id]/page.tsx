@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react"
 import { CanvasEditor, CanvasEditorRef } from "@/components/canvas-editor"
+
 import { Toolbar } from "@/components/toolbar"
 import { TopBar } from "@/components/top-bar"
 
