@@ -1,63 +1,68 @@
-import { useState, useCallback } from "react"
+"use client"
 
-interface HistoryState {
-  canUndo: boolean
-  canRedo: boolean
-}
+import { useState, useCallback, useRef, useEffect } from "react"
+import type { Canvas } from "fabric"
 
-export function useCanvasHistory() {
+export function useCanvasHistory(canvas: Canvas | null) {
   const [history, setHistory] = useState<string[]>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
-  const [historyState, setHistoryState] = useState<HistoryState>({
-    canUndo: false,
-    canRedo: false,
-  })
+  const isUndoRedoRef = useRef(false)
 
-  const saveState = useCallback((state: string) => {
+  useEffect(() => {
+    if (canvas && history.length === 0) {
+      const json = JSON.stringify(canvas.toJSON())
+      setHistory([json])
+      setCurrentIndex(0)
+    }
+  }, [canvas, history.length])
+
+  const recordState = useCallback(() => {
+    if (!canvas || isUndoRedoRef.current) return
+
+    const json = JSON.stringify(canvas.toJSON())
     setHistory((prev) => {
       const newHistory = prev.slice(0, currentIndex + 1)
-      newHistory.push(state)
-      
+      newHistory.push(json)
+      // Keep only last 50 states
       if (newHistory.length > 50) {
         newHistory.shift()
-        setCurrentIndex((idx) => idx)
-      } else {
-        setCurrentIndex((idx) => idx + 1)
+        setCurrentIndex((prevIndex) => prevIndex)
+        return newHistory
       }
-      
+      setCurrentIndex((prevIndex) => prevIndex + 1)
       return newHistory
     })
-  }, [currentIndex])
+  }, [canvas, currentIndex])
 
-  const undo = useCallback((): string | null => {
-    if (currentIndex > 0) {
-      setCurrentIndex((idx) => idx - 1)
-      return history[currentIndex - 1]
-    }
-    return null
-  }, [currentIndex, history])
+  const undo = useCallback(() => {
+    if (!canvas || currentIndex <= 0) return
 
-  const redo = useCallback((): string | null => {
-    if (currentIndex < history.length - 1) {
-      setCurrentIndex((idx) => idx + 1)
-      return history[currentIndex + 1]
-    }
-    return null
-  }, [currentIndex, history])
-
-  const updateHistoryState = useCallback(() => {
-    setHistoryState({
-      canUndo: currentIndex > 0,
-      canRedo: currentIndex < history.length - 1,
+    isUndoRedoRef.current = true
+    const prevState = history[currentIndex - 1]
+    canvas.loadFromJSON(JSON.parse(prevState), () => {
+      canvas.renderAll()
+      isUndoRedoRef.current = false
     })
-  }, [currentIndex, history.length])
+    setCurrentIndex((prev) => prev - 1)
+  }, [canvas, history, currentIndex])
+
+  const redo = useCallback(() => {
+    if (!canvas || currentIndex >= history.length - 1) return
+
+    isUndoRedoRef.current = true
+    const nextState = history[currentIndex + 1]
+    canvas.loadFromJSON(JSON.parse(nextState), () => {
+      canvas.renderAll()
+      isUndoRedoRef.current = false
+    })
+    setCurrentIndex((prev) => prev + 1)
+  }, [canvas, history, currentIndex])
 
   return {
-    saveState,
     undo,
     redo,
-    canUndo: historyState.canUndo,
-    canRedo: historyState.canRedo,
-    updateHistoryState,
+    canUndo: currentIndex > 0,
+    canRedo: currentIndex < history.length - 1,
+    recordState,
   }
 }

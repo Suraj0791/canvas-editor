@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Share2, Undo2, Redo2, Download, Eye, LayoutTemplate } from "lucide-react"
+import { Share2, Undo2, Redo2, Download, Eye, LayoutTemplate, Menu } from "lucide-react"
 import type { Canvas } from "fabric"
 import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Separator } from "@/components/ui/separator"
 
 interface TopBarProps {
   sceneId: string
@@ -72,14 +73,15 @@ export function TopBar({ sceneId, viewOnly, onUndo, onRedo, canUndo, canRedo, ca
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Desktop Actions */}
+      <div className="hidden items-center gap-2 md:flex">
         {!viewOnly && (
           <>
             <Button variant="ghost" size="sm" onClick={onOpenTemplates} className="gap-2">
               <LayoutTemplate className="h-4 w-4" />
               Templates
             </Button>
-            <div className="mx-2 h-6 w-px bg-neutral-200" />
+            <Separator orientation="vertical" className="h-6" />
             <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} className="gap-2">
               <Undo2 className="h-4 w-4" />
               Undo
@@ -88,7 +90,7 @@ export function TopBar({ sceneId, viewOnly, onUndo, onRedo, canUndo, canRedo, ca
               <Redo2 className="h-4 w-4" />
               Redo
             </Button>
-            <div className="mx-2 h-6 w-px bg-neutral-200" />
+            <Separator orientation="vertical" className="h-6" />
           </>
         )}
 
@@ -109,6 +111,47 @@ export function TopBar({ sceneId, viewOnly, onUndo, onRedo, canUndo, canRedo, ca
           <Share2 className="h-4 w-4" />
           Share Canvas
         </Button>
+      </div>
+
+      {/* Mobile Menu */}
+      <div className="flex md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {!viewOnly && (
+              <>
+                <DropdownMenuItem onClick={onOpenTemplates}>
+                  <LayoutTemplate className="mr-2 h-4 w-4" />
+                  Templates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onUndo} disabled={!canUndo}>
+                  <Undo2 className="mr-2 h-4 w-4" />
+                  Undo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onRedo} disabled={!canRedo}>
+                  <Redo2 className="mr-2 h-4 w-4" />
+                  Redo
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem onClick={handleExportPNG}>
+              <Download className="mr-2 h-4 w-4" />
+              Export PNG
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportSVG}>
+              <Download className="mr-2 h-4 w-4" />
+              Export SVG
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share Canvas
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

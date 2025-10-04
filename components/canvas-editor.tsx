@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { Canvas } from "fabric"
 import { Toolbar } from "@/components/toolbar"
 import { TopBar } from "@/components/top-bar"
@@ -19,17 +19,30 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null)
   const [selectedTool, setSelectedTool] = useState<string>("select")
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const { saveCanvas, loadCanvas } = useCanvasState(sceneId, fabricCanvas)
   const { undo, redo, canUndo, canRedo, recordState } = useCanvasHistory(fabricCanvas)
 
+  const handleSaveCanvas = useCallback(() => {
+    if (fabricCanvas && isInitialized) {
+      saveCanvas()
+    }
+  }, [fabricCanvas, isInitialized, saveCanvas])
+
+  const handleRecordState = useCallback(() => {
+    if (fabricCanvas && isInitialized) {
+      recordState()
+    }
+  }, [fabricCanvas, isInitialized, recordState])
+
   // Initialize Fabric.js canvas
   useEffect(() => {
-    if (!canvasRef.current) return
+    if (!canvasRef.current || fabricCanvas) return
 
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
-      height: window.innerHeight - 64, // Account for top bar
+      height: window.innerHeight - 64,
       backgroundColor: "#ffffff",
       selection: !viewOnly,
     })
@@ -46,29 +59,7 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
       })
     })
 
-    // Record state changes for undo/redo
-    canvas.on("object:modified", () => {
-      recordState()
-      saveCanvas()
-    })
-
-    canvas.on("object:added", () => {
-      recordState()
-      saveCanvas()
-    })
-
-    canvas.on("object:removed", () => {
-      recordState()
-      saveCanvas()
-    })
-
     setFabricCanvas(canvas)
-
-    loadCanvas().then((exists) => {
-      if (!exists && !viewOnly && !initialTemplate) {
-        setShowTemplateDialog(true)
-      }
-    })
 
     // Handle window resize
     const handleResize = () => {
@@ -85,7 +76,37 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
       window.removeEventListener("resize", handleResize)
       canvas.dispose()
     }
-  }, [sceneId, viewOnly, initialTemplate, loadCanvas, recordState, saveCanvas])
+  }, [viewOnly, fabricCanvas])
+
+  useEffect(() => {
+    if (!fabricCanvas || isInitialized) return
+
+    loadCanvas().then((exists) => {
+      setIsInitialized(true)
+      if (!exists && !viewOnly && !initialTemplate) {
+        setShowTemplateDialog(true)
+      }
+    })
+  }, [fabricCanvas, isInitialized, loadCanvas, viewOnly, initialTemplate])
+
+  useEffect(() => {
+    if (!fabricCanvas || !isInitialized) return
+
+    const handleModified = () => {
+      handleRecordState()
+      handleSaveCanvas()
+    }
+
+    fabricCanvas.on("object:modified", handleModified)
+    fabricCanvas.on("object:added", handleModified)
+    fabricCanvas.on("object:removed", handleModified)
+
+    return () => {
+      fabricCanvas.off("object:modified", handleModified)
+      fabricCanvas.off("object:added", handleModified)
+      fabricCanvas.off("object:removed", handleModified)
+    }
+  }, [fabricCanvas, isInitialized, handleRecordState, handleSaveCanvas])
 
   return (
     <div className="flex h-screen flex-col bg-neutral-50">

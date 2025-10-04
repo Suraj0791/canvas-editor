@@ -1,131 +1,182 @@
 "use client"
 
-import { Square, Circle, Type, Pencil, Lock, Unlock, Trash2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { Square, Circle, Type, Pencil, MousePointer2, Trash2, Lock, Unlock } from "lucide-react"
+import { type Canvas, Rect, Circle as FabricCircle, IText, PencilBrush } from "fabric"
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface ToolbarProps {
-  onAddRectangle: () => void
-  onAddCircle: () => void
-  onAddText: () => void
-  onToggleDrawing: () => void
-  onChangeColor: (color: string) => void
-  hasSelection: boolean
-  onLock: () => void
-  onUnlock: () => void
-  onDelete: () => void
+  canvas: Canvas | null
+  selectedTool: string
+  onToolSelect: (tool: string) => void
 }
 
-const colors = [
-  "#3b82f6",
-  "#ef4444",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ec4899",
-  "#1f2937",
-]
+export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
+  const [color, setColor] = useState("#3B82F6")
 
-export function Toolbar({
-  onAddRectangle,
-  onAddCircle,
-  onAddText,
-  onToggleDrawing,
-  onChangeColor,
-  hasSelection,
-  onLock,
-  onUnlock,
-  onDelete,
-}: ToolbarProps) {
+  const tools = [
+    { id: "select", icon: MousePointer2, label: "Select" },
+    { id: "rectangle", icon: Square, label: "Rectangle" },
+    { id: "circle", icon: Circle, label: "Circle" },
+    { id: "text", icon: Type, label: "Text" },
+    { id: "pen", icon: Pencil, label: "Pen" },
+  ]
+
+  const handleToolClick = (toolId: string) => {
+    if (!canvas) return
+    onToolSelect(toolId)
+
+    // Disable drawing mode by default
+    canvas.isDrawingMode = false
+
+    if (toolId === "select") {
+      canvas.defaultCursor = "default"
+    } else if (toolId === "pen") {
+      canvas.isDrawingMode = true
+      canvas.freeDrawingBrush = new PencilBrush(canvas)
+      canvas.freeDrawingBrush.color = color
+      canvas.freeDrawingBrush.width = 3
+    } else if (toolId === "rectangle") {
+      const rect = new Rect({
+        left: 100,
+        top: 100,
+        width: 150,
+        height: 100,
+        fill: color,
+      })
+      canvas.add(rect)
+      canvas.setActiveObject(rect)
+      canvas.renderAll()
+      onToolSelect("select")
+    } else if (toolId === "circle") {
+      const circle = new FabricCircle({
+        left: 100,
+        top: 100,
+        radius: 50,
+        fill: color,
+      })
+      canvas.add(circle)
+      canvas.setActiveObject(circle)
+      canvas.renderAll()
+      onToolSelect("select")
+    } else if (toolId === "text") {
+      const text = new IText("Double click to edit", {
+        left: 100,
+        top: 100,
+        fill: color,
+        fontSize: 24,
+      })
+      canvas.add(text)
+      canvas.setActiveObject(text)
+      canvas.renderAll()
+      onToolSelect("select")
+    }
+  }
+
+  const handleDelete = () => {
+    if (!canvas) return
+    const activeObjects = canvas.getActiveObjects()
+    if (activeObjects.length > 0) {
+      activeObjects.forEach((obj) => canvas.remove(obj))
+      canvas.discardActiveObject()
+      canvas.renderAll()
+    }
+  }
+
+  const handleLock = () => {
+    if (!canvas) return
+    const activeObject = canvas.getActiveObject()
+    if (activeObject) {
+      activeObject.set({
+        lockMovementX: true,
+        lockMovementY: true,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        selectable: false,
+      })
+      canvas.discardActiveObject()
+      canvas.renderAll()
+    }
+  }
+
+  const handleUnlock = () => {
+    if (!canvas) return
+    const objects = canvas.getObjects()
+    objects.forEach((obj) => {
+      obj.set({
+        lockMovementX: false,
+        lockMovementY: false,
+        lockRotation: false,
+        lockScalingX: false,
+        lockScalingY: false,
+        selectable: true,
+      })
+    })
+    canvas.renderAll()
+  }
+
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor)
+    if (!canvas) return
+    const activeObject = canvas.getActiveObject()
+    if (activeObject) {
+      activeObject.set("fill", newColor)
+      canvas.renderAll()
+    }
+  }
+
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg border p-2 flex flex-wrap items-center gap-2 max-w-[95vw] z-10">
-      <div className="flex items-center gap-1">
+    <div className="flex w-20 flex-col items-center gap-2 border-r border-neutral-200 bg-white py-6">
+      {tools.map((tool) => (
         <Button
-          variant="ghost"
+          key={tool.id}
+          variant={selectedTool === tool.id ? "default" : "ghost"}
           size="icon"
-          onClick={onAddRectangle}
-          title="Add Rectangle (R)"
-          className="h-9 w-9"
+          onClick={() => handleToolClick(tool.id)}
+          title={tool.label}
+          className="h-12 w-12"
         >
-          <Square className="h-4 w-4" />
+          <tool.icon className="h-5 w-5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onAddCircle}
-          title="Add Circle (C)"
-          className="h-9 w-9"
-        >
-          <Circle className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onAddText}
-          title="Add Text (T)"
-          className="h-9 w-9"
-        >
-          <Type className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleDrawing}
-          title="Draw (D)"
-          className="h-9 w-9"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+      ))}
+
+      <div className="my-2 h-px w-12 bg-neutral-200" />
+
+      <div className="flex flex-col items-center gap-2 px-2">
+        <Label htmlFor="color" className="sr-only">
+          Color
+        </Label>
+        <Input
+          id="color"
+          type="color"
+          value={color}
+          onChange={(e) => handleColorChange(e.target.value)}
+          className="h-12 w-12 cursor-pointer border-2 p-1"
+        />
       </div>
 
-      <Separator orientation="vertical" className="h-6 hidden sm:block" />
+      <div className="my-2 h-px w-12 bg-neutral-200" />
 
-      <div className="flex items-center gap-1">
-        {colors.map((color) => (
-          <button
-            key={color}
-            onClick={() => onChangeColor(color)}
-            className="w-7 h-7 rounded border-2 border-gray-300 hover:border-gray-400 transition-colors"
-            style={{ backgroundColor: color }}
-            title={`Color: ${color}`}
-          />
-        ))}
-      </div>
+      <Button variant="ghost" size="icon" onClick={handleLock} title="Lock Selected" className="h-12 w-12">
+        <Lock className="h-5 w-5" />
+      </Button>
 
-      {hasSelection && (
-        <>
-          <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onLock}
-              title="Lock Object"
-              className="h-9 w-9"
-            >
-              <Lock className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onUnlock}
-              title="Unlock Object"
-              className="h-9 w-9"
-            >
-              <Unlock className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              title="Delete (Del)"
-              className="h-9 w-9 text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </>
-      )}
+      <Button variant="ghost" size="icon" onClick={handleUnlock} title="Unlock All" className="h-12 w-12">
+        <Unlock className="h-5 w-5" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleDelete}
+        title="Delete Selected"
+        className="h-12 w-12 text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-5 w-5" />
+      </Button>
     </div>
   )
 }

@@ -1,59 +1,54 @@
-import { useEffect, useRef, useCallback, useState } from "react"
+"use client"
+
+import { useCallback, useEffect, useRef } from "react"
+import type { Canvas } from "fabric"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
-interface CanvasState {
-  objects: any[]
-  background?: string
-}
-
-export function useCanvasState(sceneId: string, viewOnly: boolean = false) {
+export function useCanvasState(sceneId: string, canvas: Canvas | null) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const loadCanvas = useCallback(async (): Promise<CanvasState | null> => {
-    setIsLoading(true)
-    setError(null)
+  const saveCanvas = useCallback(async () => {
+    if (!canvas) return
+
+    // Debounce saves to reduce Firestore writes
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const json = canvas.toJSON()
+        await setDoc(doc(db, "canvases", sceneId), {
+          data: json,
+          updatedAt: new Date().toISOString(),
+        })
+      } catch (error) {
+        console.error("[v0] Error saving canvas:", error)
+      }
+    }, 1000) // Debounce for 1 second
+  }, [canvas, sceneId])
+
+  const loadCanvas = useCallback(async (): Promise<boolean> => {
+    if (!canvas) return false
+
     try {
       const docRef = doc(db, "canvases", sceneId)
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
-        setIsLoading(false)
-        return docSnap.data() as CanvasState
+        const data = docSnap.data()
+        canvas.loadFromJSON(data.data, () => {
+          canvas.renderAll()
+        })
+        return true
       }
-      setIsLoading(false)
-      return null
+      return false
     } catch (error) {
-      console.error("Error loading canvas:", error)
-      setError("Failed to load canvas. Please refresh the page.")
-      setIsLoading(false)
-      return null
+      console.error("[v0] Error loading canvas:", error)
+      return false
     }
-  }, [sceneId])
-
-  const saveCanvas = useCallback(
-    (canvasData: CanvasState) => {
-      if (viewOnly) return
-
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          const docRef = doc(db, "canvases", sceneId)
-          await setDoc(docRef, canvasData)
-          console.log("[v0] Canvas saved to Firebase")
-        } catch (error) {
-          console.error("Error saving canvas:", error)
-          setError("Failed to save canvas. Your changes may not be persisted.")
-        }
-      }, 1000)
-    },
-    [sceneId, viewOnly]
-  )
+  }, [canvas, sceneId])
 
   useEffect(() => {
     return () => {
@@ -63,5 +58,5 @@ export function useCanvasState(sceneId: string, viewOnly: boolean = false) {
     }
   }, [])
 
-  return { loadCanvas, saveCanvas, error, isLoading }
+  return { saveCanvas, loadCanvas }
 }

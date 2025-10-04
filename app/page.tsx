@@ -2,79 +2,105 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus } from 'lucide-react'
-import { templates } from "@/lib/templates"
+import { Button } from "@/components/ui/button"
+import { generateSceneId } from "@/lib/utils"
+import { FileText, Layout, Workflow, Sparkles } from "lucide-react"
 
-export default function Home() {
+const templates = [
+  {
+    id: "blank",
+    name: "Blank Canvas",
+    description: "Start with an empty canvas",
+    icon: Sparkles,
+    gradient: "from-blue-50 to-blue-100",
+  },
+  {
+    id: "presentation",
+    name: "Presentation Slide",
+    description: "Title and content layout",
+    icon: FileText,
+    gradient: "from-purple-50 to-purple-100",
+  },
+  {
+    id: "wireframe",
+    name: "Wireframe",
+    description: "Basic UI wireframe layout",
+    icon: Layout,
+    gradient: "from-green-50 to-green-100",
+  },
+  {
+    id: "diagram",
+    name: "Flowchart",
+    description: "Connected shapes for diagrams",
+    icon: Workflow,
+    gradient: "from-orange-50 to-orange-100",
+  },
+]
+
+export default function HomePage() {
   const router = useRouter()
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("blank")
+  const [isCreating, setIsCreating] = useState(false)
 
-  const handleCreateCanvas = () => {
-    const sceneId = Math.random().toString(36).substring(7)
-    const template = templates.find(t => t.id === selectedTemplate)
-    
-    if (template && template.objects.length > 0) {
-      localStorage.setItem(`canvas-template-${sceneId}`, JSON.stringify(template.objects))
-    }
-    
-    router.push(`/canvas/${sceneId}`)
+  const createCanvas = (templateId: string) => {
+    setIsCreating(true)
+    const sceneId = generateSceneId()
+    router.push(`/canvas/${sceneId}?template=${templateId}`)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full space-y-8">
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold text-gray-900">Canvas Editor</h1>
-          <p className="text-xl text-gray-600">Create and share beautiful canvases with real-time collaboration</p>
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-neutral-50 to-neutral-100">
+      <header className="border-b bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <h1 className="text-2xl font-bold text-primary">Canvas Editor</h1>
+          <p className="text-sm text-muted-foreground">Create and share beautiful canvases</p>
         </div>
+      </header>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle>Choose a Template</CardTitle>
-            <CardDescription>Start with a template or create a blank canvas</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <button
+      <main className="container mx-auto flex-1 px-4 py-12">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-4xl font-bold text-neutral-900">Choose a Template</h2>
+            <p className="text-lg text-neutral-600">
+              Select a template to start your canvas or begin with a blank canvas
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            {templates.map((template) => {
+              const Icon = template.icon
+              return (
+                <Card
                   key={template.id}
-                  onClick={() => setSelectedTemplate(template.id)}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    selectedTemplate === template.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
+                  className="group cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+                  onClick={() => createCanvas(template.id)}
                 >
-                  <h3 className="font-semibold text-lg">{template.name}</h3>
-                  <p className="text-sm text-gray-600">{template.description}</p>
-                </button>
-              ))}
-            </div>
-
-            <Button 
-              onClick={handleCreateCanvas}
-              size="lg"
-              className="w-full"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Create New Canvas
-            </Button>
-          </CardContent>
-        </Card>
-
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-600">Features:</p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-700">
-            <span>✓ Real-time saving</span>
-            <span>✓ Share with view-only links</span>
-            <span>✓ Undo/Redo support</span>
-            <span>✓ Export as PNG</span>
-            <span>✓ Keyboard shortcuts</span>
+                  <CardHeader>
+                    <div
+                      className={`mb-4 flex h-32 items-center justify-center rounded-lg bg-gradient-to-br ${template.gradient}`}
+                    >
+                      <Icon className="h-12 w-12 text-neutral-600" />
+                    </div>
+                    <CardTitle className="group-hover:text-primary">{template.name}</CardTitle>
+                    <CardDescription>{template.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" disabled={isCreating}>
+                      {isCreating ? "Creating..." : "Start Creating"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </div>
-      </div>
+      </main>
+
+      <footer className="border-t bg-white/80 backdrop-blur-sm py-6">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          Built with Next.js and Fabric.js
+        </div>
+      </footer>
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { Canvas } from "fabric"
 import { Rect, Circle as FabricCircle, IText } from "fabric"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 interface TemplateDialogProps {
   open: boolean
@@ -40,8 +40,13 @@ const templates = [
 ]
 
 export function TemplateDialog({ open, onOpenChange, canvas, initialTemplate }: TemplateDialogProps) {
+  const hasAppliedInitialTemplate = useRef(false)
+
   const applyTemplate = (templateId: string) => {
-    if (!canvas) return
+    if (!canvas) {
+      console.log("[v0] Canvas not ready, skipping template application")
+      return
+    }
 
     // Clear existing canvas
     canvas.clear()
@@ -220,7 +225,8 @@ export function TemplateDialog({ open, onOpenChange, canvas, initialTemplate }: 
   }
 
   useEffect(() => {
-    if (initialTemplate && canvas && !open) {
+    if (initialTemplate && canvas && !hasAppliedInitialTemplate.current) {
+      hasAppliedInitialTemplate.current = true
       applyTemplate(initialTemplate)
     }
   }, [initialTemplate, canvas])
