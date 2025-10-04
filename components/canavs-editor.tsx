@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
 import { fabric } from "fabric"
+import { useCanvasState } from "@/hooks/use-canvas-state"
 
 interface CanvasEditorProps {
   sceneId: string
@@ -26,11 +27,22 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null)
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null)
     const [isDrawingMode, setIsDrawingMode] = useState(false)
+    const { loadCanvas, saveCanvas } = useCanvasState(sceneId, viewOnly)
 
     const GRID_SIZE = 20
 
     const snapToGrid = (value: number) => {
       return Math.round(value / GRID_SIZE) * GRID_SIZE
+    }
+
+    const handleCanvasChange = () => {
+      if (!fabricCanvasRef.current || viewOnly) return
+      
+      const json = fabricCanvasRef.current.toJSON()
+      saveCanvas({
+        objects: json.objects,
+        background: json.background,
+      })
     }
 
     useImperativeHandle(ref, () => ({
@@ -50,6 +62,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.add(rect)
         fabricCanvasRef.current.setActiveObject(rect)
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       addCircle: () => {
         if (!fabricCanvasRef.current || viewOnly) return
@@ -66,6 +79,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.add(circle)
         fabricCanvasRef.current.setActiveObject(circle)
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       addText: () => {
         if (!fabricCanvasRef.current || viewOnly) return
@@ -81,6 +95,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.add(text)
         fabricCanvasRef.current.setActiveObject(text)
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       toggleDrawingMode: () => {
         if (!fabricCanvasRef.current || viewOnly) return
@@ -102,6 +117,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         
         activeObject.set({ fill: color })
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       getSelectedObject: () => selectedObject,
       lockObject: () => {
@@ -118,6 +134,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           selectable: true,
         })
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       unlockObject: () => {
         if (!fabricCanvasRef.current || viewOnly) return
@@ -132,6 +149,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           lockScalingY: false,
         })
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
       deleteObject: () => {
         if (!fabricCanvasRef.current || viewOnly) return
@@ -140,6 +158,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         
         fabricCanvasRef.current.remove(activeObject)
         fabricCanvasRef.current.renderAll()
+        handleCanvasChange()
       },
     }))
 
@@ -154,6 +173,15 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       })
 
       fabricCanvasRef.current = canvas
+
+      loadCanvas().then((data) => {
+        if (data && data.objects) {
+          canvas.loadFromJSON({ objects: data.objects, background: data.background }, () => {
+            canvas.renderAll()
+            console.log("[v0] Canvas loaded from Firebase")
+          })
+        }
+      })
 
       if (viewOnly) {
         canvas.forEachObject((obj) => {
@@ -191,14 +219,26 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
       canvas.on("object:modified", () => {
         if (!viewOnly) {
-          console.log("[v0] Object modified")
+          handleCanvasChange()
+        }
+      })
+
+      canvas.on("object:added", () => {
+        if (!viewOnly) {
+          handleCanvasChange()
+        }
+      })
+
+      canvas.on("object:removed", () => {
+        if (!viewOnly) {
+          handleCanvasChange()
         }
       })
 
       return () => {
         canvas.dispose()
       }
-    }, [viewOnly])
+    }, [viewOnly, sceneId])
 
     return (
       <div className="relative w-full h-full">
