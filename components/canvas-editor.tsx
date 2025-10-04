@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { Canvas } from "fabric"
+import { Canvas, FabricObject } from "fabric"
 import { Toolbar } from "@/components/toolbar"
 import { TopBar } from "@/components/top-bar"
 import { TemplateDialog } from "@/components/template-dialog"
@@ -16,7 +16,7 @@ interface CanvasEditorProps {
 
 export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const fabricCanvasRef = useRef<Canvas | null>(null)
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null)
   const [selectedTool, setSelectedTool] = useState<string>("select")
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
@@ -38,37 +38,20 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
   }, [fabricCanvas, isInitialized, recordState])
 
   useEffect(() => {
-    if (!canvasRef.current || fabricCanvas) return
+    if (!canvasRef.current || fabricCanvasRef.current) return
 
     const width = window.innerWidth - (viewOnly ? 0 : 80)
     const height = window.innerHeight - 64
-
-    canvasRef.current.width = width
-    canvasRef.current.height = height
 
     const canvas = new Canvas(canvasRef.current, {
       width,
       height,
       backgroundColor: "#ffffff",
-      selection: true,
-      renderOnAddRemove: true,
-      enableRetinaScaling: false,
-    })
-
-    canvas.defaultCursor = "default"
-    canvas.hoverCursor = "move"
-    canvas.moveCursor = "move"
-
-    console.log("[Canvas] Initialized:", {
-      width: canvas.width,
-      height: canvas.height,
-      element: canvasRef.current,
     })
 
     canvas.on("object:moving", (e) => {
       const obj = e.target
       if (!obj) return
-
       const gridSize = 20
       obj.set({
         left: Math.round((obj.left || 0) / gridSize) * gridSize,
@@ -76,23 +59,21 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
       })
     })
 
-    canvas.renderAll()
+    fabricCanvasRef.current = canvas
     setFabricCanvas(canvas)
+
+    console.log("[Canvas] Created:", {
+      width: canvas.width,
+      height: canvas.height,
+      canvasElement: canvasRef.current,
+      upperCanvasElement: canvas.upperCanvasEl,
+      lowerCanvasElement: canvas.lowerCanvasEl,
+    })
 
     const handleResize = () => {
       const newWidth = window.innerWidth - (viewOnly ? 0 : 80)
       const newHeight = window.innerHeight - 64
-
-      if (canvasRef.current) {
-        canvasRef.current.width = newWidth
-        canvasRef.current.height = newHeight
-      }
-
-      canvas.setDimensions({
-        width: newWidth,
-        height: newHeight,
-      })
-      canvas.renderAll()
+      canvas.setDimensions({ width: newWidth, height: newHeight })
     }
 
     window.addEventListener("resize", handleResize)
@@ -100,8 +81,9 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
     return () => {
       window.removeEventListener("resize", handleResize)
       canvas.dispose()
+      fabricCanvasRef.current = null
     }
-  }, [viewOnly, fabricCanvas])
+  }, [viewOnly])
 
   useEffect(() => {
     if (!fabricCanvas || isInitialized) return
@@ -147,16 +129,8 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
       />
       <div className="flex flex-1 overflow-hidden">
         {!viewOnly && <Toolbar canvas={fabricCanvas} selectedTool={selectedTool} onToolSelect={setSelectedTool} />}
-        <div ref={containerRef} className="flex-1 flex items-center justify-center bg-neutral-100 p-8">
-          <canvas 
-            ref={canvasRef} 
-            className="shadow-2xl border border-neutral-300"
-            style={{ 
-              display: 'block',
-              maxWidth: '100%',
-              maxHeight: '100%'
-            }}
-          />
+        <div className="flex-1 relative bg-neutral-100">
+          <canvas ref={canvasRef} />
         </div>
       </div>
 

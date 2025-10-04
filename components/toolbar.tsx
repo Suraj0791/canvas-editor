@@ -64,11 +64,15 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
       console.log("[v0] Adding rectangle at:", { left, top, width: 150, height: 100, fill: color })
       canvas.add(rect)
       canvas.setActiveObject(rect)
-      canvas.renderAll()
-
+      
       console.log("[v0] Rectangle added. Canvas objects count:", canvas.getObjects().length)
-      console.log("[v0] Canvas dimensions:", { width: canvas.width, height: canvas.height })
-      console.log("[v0] Rectangle object:", rect.toJSON())
+      console.log("[v0] Upper canvas element:", canvas.upperCanvasEl)
+      console.log("[v0] Canvas is dirty:", canvas.isRendering())
+      
+      const ctx = canvas.getContext();
+      console.log("[v0] Canvas context:", ctx)
+      ctx.fillStyle = 'green';
+      ctx.fillRect(0, 0, 50, 50);
     } else if (toolId === "circle") {
       const left = 100 + Math.random() * 200
       const top = 100 + Math.random() * 200
@@ -85,7 +89,12 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
       console.log("[v0] Adding circle at:", { left, top, radius: 50, fill: color })
       canvas.add(circle)
       canvas.setActiveObject(circle)
-      canvas.renderAll()
+      canvas.requestRenderAll()
+
+      setTimeout(() => {
+        canvas.requestRenderAll()
+        console.log("[v0] Force render after circle")
+      }, 50)
 
       console.log("[v0] Circle added. Canvas objects count:", canvas.getObjects().length)
     } else if (toolId === "text") {
@@ -102,7 +111,12 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
       console.log("[v0] Adding text at:", { left, top, fill: color })
       canvas.add(text)
       canvas.setActiveObject(text)
-      canvas.renderAll()
+      canvas.requestRenderAll()
+
+      setTimeout(() => {
+        canvas.requestRenderAll()
+        console.log("[v0] Force render after text")
+      }, 50)
 
       console.log("[v0] Text added. Canvas objects count:", canvas.getObjects().length)
     }
@@ -114,7 +128,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
     if (activeObjects.length > 0) {
       activeObjects.forEach((obj) => canvas.remove(obj))
       canvas.discardActiveObject()
-      canvas.renderAll()
+      canvas.requestRenderAll()
     }
   }
 
@@ -131,7 +145,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
         selectable: false,
       })
       canvas.discardActiveObject()
-      canvas.renderAll()
+      canvas.requestRenderAll()
     }
   }
 
@@ -148,7 +162,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
         selectable: true,
       })
     })
-    canvas.renderAll()
+    canvas.requestRenderAll()
   }
 
   const handleColorChange = (newColor: string) => {
@@ -157,7 +171,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
     const activeObject = canvas.getActiveObject()
     if (activeObject) {
       activeObject.set("fill", newColor)
-      canvas.renderAll()
+      canvas.requestRenderAll()
     }
   }
 
