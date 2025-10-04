@@ -3,6 +3,7 @@
 import { ArrowLeft, Share2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 interface TopBarProps {
   sceneId: string
@@ -11,15 +12,23 @@ interface TopBarProps {
 
 export function TopBar({ sceneId, viewOnly = false }: TopBarProps) {
   const router = useRouter()
+  const { toast } = useToast()
 
   const handleShare = async () => {
     const url = `${window.location.origin}/canvas/${sceneId}?viewOnly=true`
     
     try {
       await navigator.clipboard.writeText(url)
-      alert("Link copied to clipboard!")
+      toast({
+        title: "Link copied!",
+        description: "Share this link to let others view your canvas.",
+      })
     } catch (err) {
-      console.error("Failed to copy:", err)
+      toast({
+        title: "Failed to copy",
+        description: "Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
