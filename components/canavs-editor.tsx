@@ -23,6 +23,7 @@ export interface CanvasEditorRef {
   deleteObject: () => void
   undo: () => void
   redo: () => void
+  exportAsPNG: () => void
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -200,6 +201,19 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             updateHistoryState()
           })
         }
+      },
+      exportAsPNG: () => {
+        if (!fabricCanvasRef.current) return
+        
+        const dataURL = fabricCanvasRef.current.toDataURL({
+          format: "png",
+          quality: 1,
+        })
+        
+        const link = document.createElement("a")
+        link.download = `canvas-${sceneId}.png`
+        link.href = dataURL
+        link.click()
       },
     }))
 

@@ -39,6 +39,7 @@ export default function CanvasPage({
         viewOnly={viewOnly}
         onUndo={() => canvasRef.current?.undo()}
         onRedo={() => canvasRef.current?.redo()}
+        onExport={() => canvasRef.current?.exportAsPNG()}
         canUndo={canUndo}
         canRedo={canRedo}
       />

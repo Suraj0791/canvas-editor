@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Share2, Eye, Undo2, Redo2 } from 'lucide-react'
+import { ArrowLeft, Share2, Eye, Undo2, Redo2, Download } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -11,6 +11,7 @@ interface TopBarProps {
   viewOnly?: boolean
   onUndo?: () => void
   onRedo?: () => void
+  onExport?: () => void
   canUndo?: boolean
   canRedo?: boolean
 }
@@ -20,6 +21,7 @@ export function TopBar({
   viewOnly = false,
   onUndo,
   onRedo,
+  onExport,
   canUndo = false,
   canRedo = false
 }: TopBarProps) {
@@ -85,6 +87,14 @@ export function TopBar({
               <Redo2 className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="h-6" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
             <Button
               variant="outline"
               size="sm"
