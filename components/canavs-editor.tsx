@@ -35,7 +35,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
     useImperativeHandle(ref, () => ({
       addRectangle: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         
         const rect = new fabric.Rect({
           left: 100,
@@ -52,7 +52,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
       },
       addCircle: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         
         const circle = new fabric.Circle({
           left: 150,
@@ -68,7 +68,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
       },
       addText: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         
         const text = new fabric.IText("Double click to edit", {
           left: 100,
@@ -83,7 +83,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
       },
       toggleDrawingMode: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         
         const newMode = !isDrawingMode
         setIsDrawingMode(newMode)
@@ -95,7 +95,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         }
       },
       changeColor: (color: string) => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         
         const activeObject = fabricCanvasRef.current.getActiveObject()
         if (!activeObject) return
@@ -105,7 +105,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       },
       getSelectedObject: () => selectedObject,
       lockObject: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         const activeObject = fabricCanvasRef.current.getActiveObject()
         if (!activeObject) return
         
@@ -120,7 +120,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
       },
       unlockObject: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         const activeObject = fabricCanvasRef.current.getActiveObject()
         if (!activeObject) return
         
@@ -134,7 +134,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         fabricCanvasRef.current.renderAll()
       },
       deleteObject: () => {
-        if (!fabricCanvasRef.current) return
+        if (!fabricCanvasRef.current || viewOnly) return
         const activeObject = fabricCanvasRef.current.getActiveObject()
         if (!activeObject) return
         
@@ -150,16 +150,28 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         width: window.innerWidth,
         height: window.innerHeight - 64,
         backgroundColor: "#ffffff",
+        selection: !viewOnly,
       })
 
       fabricCanvasRef.current = canvas
 
+      if (viewOnly) {
+        canvas.forEachObject((obj) => {
+          obj.selectable = false
+          obj.evented = false
+        })
+      }
+
       canvas.on("selection:created", (e) => {
-        setSelectedObject(e.selected?.[0] || null)
+        if (!viewOnly) {
+          setSelectedObject(e.selected?.[0] || null)
+        }
       })
 
       canvas.on("selection:updated", (e) => {
-        setSelectedObject(e.selected?.[0] || null)
+        if (!viewOnly) {
+          setSelectedObject(e.selected?.[0] || null)
+        }
       })
 
       canvas.on("selection:cleared", () => {
@@ -167,6 +179,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       })
 
       canvas.on("object:moving", (e) => {
+        if (viewOnly) return
         const obj = e.target
         if (!obj) return
 
@@ -177,13 +190,15 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       })
 
       canvas.on("object:modified", () => {
-        console.log("[v0] Object modified")
+        if (!viewOnly) {
+          console.log("[v0] Object modified")
+        }
       })
 
       return () => {
         canvas.dispose()
       }
-    }, [])
+    }, [viewOnly])
 
     return (
       <div className="relative w-full h-full">

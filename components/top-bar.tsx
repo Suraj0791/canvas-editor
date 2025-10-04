@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Share2 } from 'lucide-react'
+import { ArrowLeft, Share2, Eye } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -43,17 +43,25 @@ export function TopBar({ sceneId, viewOnly = false }: TopBarProps) {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-semibold">Canvas Editor</h1>
+        {viewOnly && (
+          <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">View Only</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleShare}
-        >
-          <Share2 className="h-4 w-4 mr-2" />
-          Share
-        </Button>
+        {!viewOnly && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShare}
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground">
           Scene: {sceneId}
         </span>
