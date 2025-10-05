@@ -135,7 +135,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
         lockRotation: true,
         lockScalingX: true,
         lockScalingY: true,
-        selectable: false,
+        selectable: true,
       })
       canvas.discardActiveObject()
       canvas.requestRenderAll()
@@ -144,9 +144,10 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
 
   const handleUnlock = () => {
     if (!canvas) return
-    const objects = canvas.getObjects()
-    objects.forEach((obj) => {
-      obj.set({
+    const activeObject = canvas.getActiveObject()
+
+    if (activeObject) {
+      activeObject.set({
         lockMovementX: false,
         lockMovementY: false,
         lockRotation: false,
@@ -154,7 +155,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
         lockScalingY: false,
         selectable: true,
       })
-    })
+    }
     canvas.requestRenderAll()
   }
 

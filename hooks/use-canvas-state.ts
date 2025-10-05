@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react"
 import type { Canvas } from "fabric"
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 function cleanCanvasData(obj: any): any {
@@ -48,6 +48,7 @@ function cleanCanvasData(obj: any): any {
 
 export function useCanvasState(sceneId: string, canvas: Canvas | null) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
+  const isLoadingRef = useRef(false)
 
   const saveCanvas = useCallback(async () => {
     if (!canvas) return
@@ -65,18 +66,15 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
           data: cleanedJson,
           updatedAt: new Date().toISOString(),
         })
-        console.log("[Canvas] ✓ Successfully saved to Firestore")
+        console.log("[Canvas] Saved to Firestore")
       } catch (error: any) {
-        console.error("[Canvas] ✗ Save failed:", error?.message || error)
-        if (error?.message?.includes("network")) {
-          console.error("Network blocked - check ad blockers or privacy extensions")
-        }
+        console.error("[Canvas] Save failed:", error?.message || error)
       }
     }, 1000)
   }, [canvas, sceneId])
 
-  const loadCanvas = useCallback(async (): Promise<boolean> => {
-    if (!canvas) return false
+  const loadCanvas = useCallback(async (): Promise<(() => void) | undefined> => {
+    if (!canvas) return undefined
 
     try {
       const docRef = doc(db, "canvases", sceneId)
@@ -84,16 +82,29 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
 
       if (docSnap.exists()) {
         const data = docSnap.data()
+        isLoadingRef.current = true
         await canvas.loadFromJSON(data.data)
         canvas.renderAll()
+        isLoadingRef.current = false
         console.log("[Canvas] Loaded from Firestore")
-        return true
       }
-      console.log("[Canvas] No saved data found")
-      return false
+
+      const unsubscribe = onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists() && !isLoadingRef.current) {
+          const data = snapshot.data()
+          isLoadingRef.current = true
+          canvas.loadFromJSON(data.data).then(() => {
+            canvas.renderAll()
+            isLoadingRef.current = false
+            console.log("[Canvas] Real-time update received")
+          })
+        }
+      })
+
+      return unsubscribe
     } catch (error) {
       console.error("[Canvas] Error loading:", error)
-      return false
+      return undefined
     }
   }, [canvas, sceneId])
 
