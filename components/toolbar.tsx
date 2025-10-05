@@ -1,9 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Square, Circle, Type, Pencil, MousePointer2, Trash2, Lock, Unlock } from "lucide-react"
-import { type Canvas, Rect, Circle as FabricCircle, IText, PencilBrush } from "fabric"
-import { useState } from "react"
+import { Square, Circle, Type, Pencil, MousePointer2, Trash2, Lock, Unlock, Pentagon } from "lucide-react"
+import { type Canvas, Rect, Circle as FabricCircle, IText, PencilBrush, Polygon, Line } from "fabric"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -15,103 +15,135 @@ interface ToolbarProps {
 
 export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
   const [color, setColor] = useState("#3B82F6")
+  const [polygonPoints, setPolygonPoints] = useState<{x: number, y: number}[]>([])
+  const [isDrawingPolygon, setIsDrawingPolygon] = useState(false)
+  const [tempLines, setTempLines] = useState<Line[]>([])
 
   const tools = [
     { id: "select", icon: MousePointer2, label: "Select" },
     { id: "rectangle", icon: Square, label: "Rectangle" },
     { id: "circle", icon: Circle, label: "Circle" },
+    { id: "polygon", icon: Pentagon, label: "Polygon" },
     { id: "text", icon: Type, label: "Text" },
     { id: "pen", icon: Pencil, label: "Pen" },
   ]
 
-  const handleToolClick = (toolId: string) => {
-    console.log("[v0] Tool clicked:", toolId, "Canvas exists:", !!canvas)
+  useEffect(() => {
+    if (!canvas) return
 
-    if (!canvas) {
-      console.log("[v0] ERROR: Canvas is null, cannot use tool")
-      return
+    const handleClick = (e: any) => {
+      if (selectedTool !== "polygon") return
+
+      const pointer = canvas.getPointer(e.e)
+
+      if (!isDrawingPolygon) {
+        setIsDrawingPolygon(true)
+        setPolygonPoints([{ x: pointer.x, y: pointer.y }])
+      } else {
+        const newPoints = [...polygonPoints, { x: pointer.x, y: pointer.y }]
+        setPolygonPoints(newPoints)
+
+        if (polygonPoints.length > 0) {
+          const lastPoint = polygonPoints[polygonPoints.length - 1]
+          const line = new Line([lastPoint.x, lastPoint.y, pointer.x, pointer.y], {
+            stroke: color,
+            strokeWidth: 2,
+            selectable: false,
+            evented: false,
+          })
+          canvas.add(line)
+          setTempLines(prev => [...prev, line])
+        }
+      }
     }
 
-    onToolSelect(toolId)
+    const handleDoubleClick = () => {
+      if (!isDrawingPolygon || polygonPoints.length < 3) return
 
+      tempLines.forEach(line => canvas.remove(line))
+      setTempLines([])
+
+      const polygon = new Polygon(polygonPoints, {
+        fill: color,
+        stroke: "#000000",
+        strokeWidth: 2,
+      })
+
+      canvas.add(polygon)
+      canvas.setActiveObject(polygon)
+      canvas.renderAll()
+
+      setIsDrawingPolygon(false)
+      setPolygonPoints([])
+    }
+
+    canvas.on("mouse:down", handleClick)
+    canvas.on("mouse:dblclick", handleDoubleClick)
+
+    return () => {
+      canvas.off("mouse:down", handleClick)
+      canvas.off("mouse:dblclick", handleDoubleClick)
+    }
+  }, [canvas, selectedTool, isDrawingPolygon, polygonPoints, tempLines, color])
+
+  useEffect(() => {
+    if (selectedTool !== "polygon" && isDrawingPolygon) {
+      tempLines.forEach(line => canvas?.remove(line))
+      setTempLines([])
+      setIsDrawingPolygon(false)
+      setPolygonPoints([])
+    }
+  }, [selectedTool])
+
+  const handleToolClick = (toolId: string) => {
+    if (!canvas) return
+
+    onToolSelect(toolId)
     canvas.isDrawingMode = false
     canvas.selection = true
 
     if (toolId === "select") {
       canvas.defaultCursor = "default"
-      console.log("[v0] Select tool activated")
     } else if (toolId === "pen") {
       canvas.isDrawingMode = true
       const brush = new PencilBrush(canvas)
       brush.color = color
       brush.width = 3
       canvas.freeDrawingBrush = brush
-      console.log("[v0] Pen tool activated, drawing mode:", canvas.isDrawingMode)
+    } else if (toolId === "polygon") {
+      canvas.defaultCursor = "crosshair"
     } else if (toolId === "rectangle") {
-      const left = 100 + Math.random() * 200
-      const top = 100 + Math.random() * 200
-
       const rect = new Rect({
-        left,
-        top,
+        left: 100 + Math.random() * 200,
+        top: 100 + Math.random() * 200,
         width: 150,
         height: 100,
         fill: color,
         stroke: "#000000",
         strokeWidth: 2,
       })
-
-      console.log("[v0] Adding rectangle at:", { left, top, width: 150, height: 100, fill: color })
       canvas.add(rect)
       canvas.setActiveObject(rect)
-      
-      console.log("[v0] Rectangle added. Canvas objects count:", canvas.getObjects().length)
     } else if (toolId === "circle") {
-      const left = 100 + Math.random() * 200
-      const top = 100 + Math.random() * 200
-
       const circle = new FabricCircle({
-        left,
-        top,
+        left: 100 + Math.random() * 200,
+        top: 100 + Math.random() * 200,
         radius: 50,
         fill: color,
         stroke: "#000000",
         strokeWidth: 2,
       })
-
-      console.log("[v0] Adding circle at:", { left, top, radius: 50, fill: color })
       canvas.add(circle)
       canvas.setActiveObject(circle)
-      canvas.requestRenderAll()
-
-      setTimeout(() => {
-        canvas.requestRenderAll()
-        console.log("[v0] Force render after circle")
-      }, 50)
-
-      console.log("[v0] Circle added. Canvas objects count:", canvas.getObjects().length)
     } else if (toolId === "text") {
-      const left = 100 + Math.random() * 200
-      const top = 100 + Math.random() * 200
-
       const text = new IText("Double click to edit", {
-        left,
-        top,
+        left: 100 + Math.random() * 200,
+        top: 100 + Math.random() * 200,
         fill: color,
         fontSize: 24,
       })
-
-      console.log("[v0] Adding text at:", { left, top, fill: color })
       canvas.add(text)
       canvas.setActiveObject(text)
-      canvas.requestRenderAll()
-
-      setTimeout(() => {
-        canvas.requestRenderAll()
-        console.log("[v0] Force render after text")
-      }, 50)
-
-      console.log("[v0] Text added. Canvas objects count:", canvas.getObjects().length)
     }
   }
 
@@ -145,7 +177,6 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
   const handleUnlock = () => {
     if (!canvas) return
     const activeObject = canvas.getActiveObject()
-
     if (activeObject) {
       activeObject.set({
         lockMovementX: false,
@@ -206,7 +237,7 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
         <Lock className="h-5 w-5" />
       </Button>
 
-      <Button variant="ghost" size="icon" onClick={handleUnlock} title="Unlock All" className="h-12 w-12">
+      <Button variant="ghost" size="icon" onClick={handleUnlock} title="Unlock Selected" className="h-12 w-12">
         <Unlock className="h-5 w-5" />
       </Button>
 
@@ -219,6 +250,12 @@ export function Toolbar({ canvas, selectedTool, onToolSelect }: ToolbarProps) {
       >
         <Trash2 className="h-5 w-5" />
       </Button>
+
+      {isDrawingPolygon && (
+        <div className="absolute bottom-4 left-20 bg-white p-2 rounded shadow text-xs">
+          Click to add points, double-click to finish
+        </div>
+      )}
     </div>
   )
 }
