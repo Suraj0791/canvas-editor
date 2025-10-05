@@ -85,13 +85,20 @@ export function CanvasEditor({ sceneId, viewOnly = false, initialTemplate }: Can
   useEffect(() => {
     if (!fabricCanvas || isInitialized) return
 
-    loadCanvas().then((exists) => {
+    let unsubscribe: (() => void) | undefined
+
+    loadCanvas().then((unsub) => {
+      unsubscribe = unsub
       setIsInitialized(true)
       
-      if (!exists && !viewOnly && !initialTemplate) {
+      if (!unsub && !viewOnly && !initialTemplate) {
         setShowTemplateDialog(true)
       }
     })
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
   }, [fabricCanvas, isInitialized, loadCanvas, viewOnly, initialTemplate])
 
   useEffect(() => {
