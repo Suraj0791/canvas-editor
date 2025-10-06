@@ -5,46 +5,46 @@ import type { Canvas } from "fabric"
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
-function cleanCanvasData(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return null
-  }
+// function cleanCanvasData(obj: any): any {
+//   if (obj === null || obj === undefined) {
+//     return null
+//   }
 
-  if (Array.isArray(obj)) {
-    return obj.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
-  }
+//   if (Array.isArray(obj)) {
+//     return obj.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
+//   }
 
-  if (typeof obj === "object") {
-    const cleaned: any = {}
-    for (const key in obj) {
-      const value = obj[key]
+//   if (typeof obj === "object") {
+//     const cleaned: any = {}
+//     for (const key in obj) {
+//       const value = obj[key]
       
-      if (key === "path" && Array.isArray(value)) {
-        cleaned[key] = "SIMPLIFIED_PATH"
-        continue
-      }
+//       if (key === "path" && Array.isArray(value)) {
+//         cleaned[key] = "SIMPLIFIED_PATH"
+//         continue
+//       }
       
-      if (value !== undefined && value !== null) {
-        if (Array.isArray(value)) {
-          const cleanedArray = value.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
-          if (cleanedArray.length > 0) {
-            cleaned[key] = cleanedArray
-          }
-        } else if (typeof value === "object") {
-          const cleanedObj = cleanCanvasData(value)
-          if (Object.keys(cleanedObj).length > 0) {
-            cleaned[key] = cleanedObj
-          }
-        } else {
-          cleaned[key] = value
-        }
-      }
-    }
-    return cleaned
-  }
+//       if (value !== undefined && value !== null) {
+//         if (Array.isArray(value)) {
+//           const cleanedArray = value.map(cleanCanvasData).filter(item => item !== null && item !== undefined)
+//           if (cleanedArray.length > 0) {
+//             cleaned[key] = cleanedArray
+//           }
+//         } else if (typeof value === "object") {
+//           const cleanedObj = cleanCanvasData(value)
+//           if (Object.keys(cleanedObj).length > 0) {
+//             cleaned[key] = cleanedObj
+//           }
+//         } else {
+//           cleaned[key] = value
+//         }
+//       }
+//     }
+//     return cleaned
+//   }
 
-  return obj
-}
+//   return obj
+// }
 
 export function useCanvasState(sceneId: string, canvas: Canvas | null) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
@@ -59,11 +59,11 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
 
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        const json = canvas.toJSON()
-        const cleanedJson = cleanCanvasData(json)
+        const json = canvas.toJSON();
+        const newjson= JSON.stringify(json);
 
         await setDoc(doc(db, "canvases", sceneId), {
-          data: cleanedJson,
+          data: newjson,
           updatedAt: new Date().toISOString(),
         })
         console.log("[Canvas] Saved to Firestore")
@@ -81,25 +81,36 @@ export function useCanvasState(sceneId: string, canvas: Canvas | null) {
       const docSnap = await getDoc(docRef)
 
       if (docSnap.exists()) {
-        const data = docSnap.data()
-        isLoadingRef.current = true
-        await canvas.loadFromJSON(data.data)
-        canvas.renderAll()
-        isLoadingRef.current = false
-        console.log("[Canvas] Loaded from Firestore")
-      }
+         const dataString = docSnap.data().data;
+         if (dataString) {
+        
+                const dataObject = JSON.parse(dataString);
+
+                isLoadingRef.current = true;
+                await canvas.loadFromJSON(dataObject);
+                canvas.renderAll();
+                isLoadingRef.current = false;
+                console.log("Canvas Loaded from Firestore");
+            }
+          }
 
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
-        if (snapshot.exists() && !isLoadingRef.current) {
-          const data = snapshot.data()
-          isLoadingRef.current = true
-          canvas.loadFromJSON(data.data).then(() => {
-            canvas.renderAll()
-            isLoadingRef.current = false
-            console.log("[Canvas] Real-time update received")
-          })
-        }
-      })
+            if (snapshot.exists() && !isLoadingRef.current) {
+                const dataString = snapshot.data().data;
+                if (dataString) {
+                  
+                    const dataObject = JSON.parse(dataString);
+
+                    isLoadingRef.current = true;
+                    canvas.loadFromJSON(dataObject).then(() => {
+                        canvas.renderAll();
+                        isLoadingRef.current = false;
+                        console.log("Canvas Real-time update received");
+                    });
+                }
+            }
+        });
+
 
       return unsubscribe
     } catch (error) {
